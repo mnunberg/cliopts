@@ -7,13 +7,19 @@ unsigned int An_Unsigned = 0;
 char *A_String = NULL;
 int A_Boolean = 0;
 int HexVal = 0x0;
+int ALongOption = -1;
+int AShortOption;
+int Required = 0;
 
 cliopts_entry entries[] = {
-        {'i', "int", CLIOPTS_ARGT_INT, &An_Integer, "A simple integer" },
-        {'u', "unsigned", CLIOPTS_ARGT_UINT, &An_Unsigned, "An unsigned value"},
-        {'s', "string", CLIOPTS_ARGT_STRING, &A_String, "a string" },
-        {'H', "hex", CLIOPTS_ARGT_HEX, &HexVal, "Hexadecimal Value" },
-        {'v', "verbose", CLIOPTS_ARGT_NONE, &A_Boolean, "a boolean" },
+        {'i', "int",        CLIOPTS_ARGT_INT, &An_Integer, "A simple integer", "INT" },
+        {'u', "unsigned",   CLIOPTS_ARGT_UINT, &An_Unsigned, "An unsigned value"},
+        {'s', "string",     CLIOPTS_ARGT_STRING, &A_String, "a string" },
+        {'H', "hex",        CLIOPTS_ARGT_HEX, &HexVal, "Hexadecimal Value" },
+        {'v', "verbose",    CLIOPTS_ARGT_NONE, &A_Boolean, "a boolean" },
+        {0 , "long-option", CLIOPTS_ARGT_NONE, &ALongOption, "Long option" },
+        {'C', NULL,         CLIOPTS_ARGT_NONE, &AShortOption, NULL },
+        {'R', "required",   CLIOPTS_ARGT_NONE, &Required, "required", NULL, 1 },
         { 0 }
 };
 
