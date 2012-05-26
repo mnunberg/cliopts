@@ -1,0 +1,25 @@
+=head1 NAME
+
+CLIOpts
+
+=head1 DESCRIPTION
+
+C<CLIOpts> is a simple option parsing library written in mainly ANSI (C89)
+C.
+
+Its goal is to be simple to use and simple to deploy.
+
+The author believes option parsing libraries should simply gather options
+from the command line and place the discovered values into buffers, doing
+some basic error checking and displaying of help as needed.
+
+If applications have more robust requirements, they can implement their own
+option parsing library
+
+See C<test.c> for an example program, and C<cliopts.h> for the header.
+
+You should be able to just drop C<CLIOpts> in your project and have it work
+
+=head1 AUTHOR & COPYRIGHT
+
+Copyright (C) 2012 M. Nunberg. See the C<LICENSE> file for licensing
