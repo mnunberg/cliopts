@@ -359,7 +359,7 @@ print_help(struct cliopts_priv *ctx, const char *progname)
         }
 
         if (cur->help) {
-            fprintf(stderr, cur->help);
+            fprintf(stderr, "%s", cur->help);
         }
         fprintf(stderr, "\n");
     }
@@ -460,6 +460,7 @@ cliopts_parse_options(cliopts_entry *entries,
     }
 
     /**TODO: Here we should check required arguments */
+    cur_ent = NULL;
     (void)cur_ent;
 
     return ret;
