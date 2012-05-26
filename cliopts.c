@@ -18,6 +18,8 @@ enum {
 
 struct cliopts_priv {
     cliopts_entry *entries;
+
+    cliopts_entry *prev;
     cliopts_entry *current;
 
     char *errstr;
@@ -219,11 +221,13 @@ parse_option(struct cliopts_priv *ctx,
 
     klen = strlen(key);
     ctx->errstr = NULL;
+    ctx->prev = ctx->current;
     ctx->current = NULL;
-    cliopt_debug("Called with %s, want=%d", key, ctx->wanted);
 
-    if (klen <= 1) {
-        ctx->errstr = "Expected a valid option (null or too short)";
+    cliopt_debug("Called with %s, want=%d", key, ctx->wanted);
+    if (klen == 0) {
+        ctx->errstr = "Got an empty string";
+        ctx->errnum = CLIOPTS_ERR_BADOPT;
         return MODE_ERROR;
     }
 
@@ -242,25 +246,30 @@ parse_option(struct cliopts_priv *ctx,
             ii = klen;
             break;
 
-        } else if (key[ii] == '=') {
+        } else if (key[ii] == '=' && prefix_len == 2) {
+            /* only split on '=' if we're called as '--' */
             valp = key + (ii + 1);
             break;
         }
     }
 
     GT_PARSEOPT:
-
-    memset(ctx->current_key, 0, sizeof(ctx->current_key));
     memset(ctx->current_value, 0, sizeof(ctx->current_value));
     memcpy(ctx->current_key, key, ii);
+    ctx->current_key[ii] = '\0';
 
     if (valp) {
         strcpy(ctx->current_value, valp);
     }
 
-    if (prefix_len == 0) {
-        ctx->errstr = "Options must begin with either '-' or '--'";
-        ctx->errnum = CLIOPTS_ERR_BADOPT;
+    if (prefix_len == 0 || prefix_len > 2) {
+        if (ctx->prev && ctx->prev->ktype == CLIOPTS_ARGT_NONE) {
+            ctx->errstr = "";
+            ctx->errnum = CLIOPTS_ERR_ISSWITCH;
+        } else {
+            ctx->errstr = "Options must begin with either '-' or '--'";
+            ctx->errnum = CLIOPTS_ERR_BADOPT;
+        }
         return MODE_ERROR;
     }
 
@@ -288,13 +297,25 @@ parse_option(struct cliopts_priv *ctx,
     }
 
     for (cur = ctx->entries; cur->dest; cur++) {
-        if ( (prefix_len == 1 && cur->kshort == ctx->current_key[0]) ||
-                (prefix_len == 2 &&
-                        strcmp(cur->klong, ctx->current_key) == 0)) {
-
-            ctx->current = cur;
-            break;
+        int optlen;
+        if (prefix_len == 1) {
+            if (cur->kshort == ctx->current_key[0]) {
+                ctx->current = cur;
+                break;
+            }
+            continue;
         }
+
+        /** else, prefix_len is 2 */
+        if (cur->klong == NULL ||
+                (optlen = strlen(cur->klong) != klen) ||
+                strcmp(cur->klong, ctx->current_key) != 0) {
+
+            continue;
+        }
+
+        ctx->current = cur;
+        break;
     }
 
     if (!ctx->current) {
@@ -304,23 +325,31 @@ parse_option(struct cliopts_priv *ctx,
     }
 
     ctx->current->found++;
+    if (ctx->current->klong != CLIOPTS_ARGT_NONE) {
+        ctx->wanted = WANT_VALUE;
+    }
 
     if (ctx->current_value[0]) {
+        /* --foo=bar */
         if (ctx->current->ktype == CLIOPTS_ARGT_NONE) {
             ctx->errnum = CLIOPTS_ERR_ISSWITCH;
             ctx->errstr = "Option takes no arguments";
             return MODE_ERROR;
         } else {
-            ctx->wanted = WANT_VALUE;
             return parse_value(ctx, ctx->current_value);
         }
     }
 
     if (ctx->current->ktype == CLIOPTS_ARGT_NONE) {
         *(char*)ctx->current->dest = 1;
+
         if (prefix_len == 1 && klen > 1) {
+            /**
+             * e.g. ls -lsh
+             */
             klen--;
             key++;
+
             /**
              * While we can also possibly recurse, this may be a security risk
              * as it wouldn't take much to cause a deep recursion on the stack
@@ -329,40 +358,116 @@ parse_option(struct cliopts_priv *ctx,
             goto GT_PARSEOPT;
         }
         return WANT_OPTION;
+
+    } else if (prefix_len == 1 && klen > 1) {
+
+        /* e.g. patch -p0 */
+        ctx->wanted = WANT_VALUE;
+        return parse_value(ctx, key + 1);
     }
     return WANT_VALUE;
+}
+
+static char *
+get_option_name(cliopts_entry *entry, char *buf)
+{
+    /* [-s,--option] */
+    char *bufp = buf;
+    bufp += sprintf(buf, "[");
+    if (entry->kshort) {
+        bufp += sprintf(bufp, "-%c", entry->kshort);
+    }
+    if (entry->klong) {
+        if (entry->kshort) {
+            bufp += sprintf(bufp, ",");
+        }
+        bufp += sprintf(bufp, "--%s", entry->klong);
+    }
+    sprintf(bufp, "]");
+    return buf;
+}
+
+static char*
+format_option_help(cliopts_entry *entry, char *buf)
+{
+    char *bufp = buf;
+
+    if (entry->kshort) {
+        bufp += sprintf(bufp, " -%c ", entry->kshort);
+    }
+
+#define _advance_margin(offset) \
+    while(bufp-buf < offset || *bufp) { \
+        if (!*bufp) { \
+            *bufp = ' '; \
+        } \
+        bufp++; \
+    }
+
+    _advance_margin(4)
+
+    if (entry->klong) {
+        bufp += sprintf(bufp, " --%s ", entry->klong);
+    }
+
+    if (entry->vdesc) {
+        bufp += sprintf(bufp, " <%s> ", entry->vdesc);
+    }
+
+    if (entry->help) {
+        _advance_margin(35)
+        bufp += sprintf(bufp, " %s ", entry->help);
+    }
+
+    *bufp = '\0';
+    return buf;
+#undef _advance_margin
 }
 
 static void
 print_help(struct cliopts_priv *ctx, const char *progname)
 {
     cliopts_entry *cur;
+    cliopts_entry helpent = { 0 };
+    char helpbuf[512] = { 0 };
+
+    helpent.klong = "help";
+    helpent.kshort = '?';
+    helpent.help = "this message";
+
     fprintf(stderr, "Usage:\n");
-    fprintf(stderr, "%2s", " ");
-    fprintf(stderr, "%s [OPTIONS...]\n\n", progname);
+    fprintf(stderr, "  %s [OPTIONS...]\n\n", progname);
 
 
     for (cur = ctx->entries; cur->dest; cur++) {
-        char shortopt = cur->kshort;
-        fprintf(stderr, "  ");
-
-        if (shortopt) {
-            fprintf(stderr, " -%c  ", shortopt);
-        } else {
-            fprintf(stderr, "   ");
-        }
-
-        if (cur->klong) {
-            fprintf(stderr, "--%-20s", cur->klong);
-        } else {
-            fprintf(stderr, "%-22s", " ");
-        }
-
-        if (cur->help) {
-            fprintf(stderr, "%s", cur->help);
-        }
-        fprintf(stderr, "\n");
+        memset(helpbuf, 0, sizeof(helpbuf));
+        format_option_help(cur, helpbuf);
+        fprintf(stderr, "   %s\n", helpbuf);
     }
+    memset(helpbuf, 0, sizeof(helpbuf));
+    fprintf(stderr, "   %s\n", format_option_help(&helpent, helpbuf));
+
+}
+
+static void
+dump_error(struct cliopts_priv *ctx)
+{
+    fprintf(stderr, "Couldn't parse options: %s\n", ctx->errstr);
+    if (ctx->errnum == CLIOPTS_ERR_BADOPT) {
+        fprintf(stderr, "Bad option: %s", ctx->current_key);
+    } else if (ctx->errnum == CLIOPTS_ERR_BAD_VALUE) {
+        fprintf(stderr, "Bad value '%s' for %s",
+                ctx->current_value,
+                ctx->current_key);
+    } else if (ctx->errnum == CLIOPTS_ERR_UNRECOGNIZED) {
+        fprintf(stderr, "No such option: %s", ctx->current_key);
+    } else if (ctx->errnum == CLIOPTS_ERR_ISSWITCH) {
+        char optbuf[64] = { 0 };
+        fprintf(stderr, "Option %s takes no arguments",
+                get_option_name(ctx->prev, optbuf));
+    }
+    fprintf(stderr, "\n");
+
 }
 
 int
@@ -377,7 +482,6 @@ cliopts_parse_options(cliopts_entry *entries,
      */
     int curmode;
     int ii, ret = 0;
-    cliopts_entry *cur_ent;
     struct cliopts_priv ctx = { 0 };
     struct cliopts_extra_settings default_settings = { 0 };
 
@@ -388,20 +492,20 @@ cliopts_parse_options(cliopts_entry *entries,
         settings->progname = argv[0];
     }
 
-    if (settings->argv_noskip) {
-        ii = 0;
-    } else {
-        ii = 1;
-    }
+    ii = (settings->argv_noskip) ? 0 : 1;
 
     if (ii >= argc) {
         *lastidx = 0;
+        ret = 0;
+        goto GT_CHECK_REQ;
         return 0;
     }
 
     curmode = WANT_OPTION;
     ctx.wanted = curmode;
+
     for (; ii < argc; ii++) {
+
         if (curmode == WANT_OPTION) {
             curmode = parse_option(&ctx, argv[ii]);
         } else if (curmode == WANT_VALUE) {
@@ -409,27 +513,11 @@ cliopts_parse_options(cliopts_entry *entries,
         }
 
         if (curmode == MODE_ERROR) {
-
             if (settings->error_nohelp == 0) {
-                fprintf(stderr, "Couldn't parse options: %s\n", ctx.errstr);
-                if (ctx.errnum == CLIOPTS_ERR_BADOPT) {
-                    fprintf(stderr, "Bad option: %s", ctx.current_key);
-                } else if (ctx.errnum == CLIOPTS_ERR_BAD_VALUE) {
-                    fprintf(stderr, "Bad value '%s' for %s",
-                            ctx.current_value,
-                            ctx.current_key);
-                } else if (ctx.errnum == CLIOPTS_ERR_UNRECOGNIZED) {
-                    fprintf(stderr, "No such option: %s", ctx.current_key);
-                }
-                fprintf(stderr, "\n");
-                print_help(&ctx, settings->progname);
-            }
-            if (settings->error_noexit == 0) {
-                exit(EXIT_FAILURE);
+                dump_error(&ctx);
             }
             ret = -1;
             break;
-
         } else if (curmode == MODE_HELP) {
             if (settings->help_noflag) {
                 /* ignore it ? */
@@ -445,23 +533,49 @@ cliopts_parse_options(cliopts_entry *entries,
             ctx.wanted = curmode;
         }
     }
+
     *lastidx = ii;
+
     if (curmode == WANT_VALUE) {
         ret = -1;
 
         if (settings->error_nohelp == 0) {
-            fprintf(stderr, "Option %s requires argument\n",
+            fprintf(stderr,
+                    "Option %s requires argument\n",
                     ctx.current_key);
+
+            print_help(&ctx, settings->progname);
+        }
+        goto GT_RET;
+    }
+
+    GT_CHECK_REQ:
+    {
+        cliopts_entry *cur_ent;
+        for (cur_ent = entries; cur_ent->dest; cur_ent++) {
+            char entbuf[128] = { 0 };
+            if (cur_ent->found || cur_ent->required == 0) {
+                continue;
+            }
+
+            ret = -1;
+            if (settings->error_nohelp) {
+                goto GT_RET;
+            }
+
+            fprintf(stderr, "Required option %s missing\n",
+                    get_option_name(cur_ent, entbuf));
+        }
+    }
+
+    GT_RET:
+    if (ret == -1) {
+        if (settings->error_nohelp == 0) {
             print_help(&ctx, settings->progname);
         }
         if (settings->error_noexit == 0) {
             exit(EXIT_FAILURE);
         }
     }
-
-    /**TODO: Here we should check required arguments */
-    cur_ent = NULL;
-    (void)cur_ent;
-
     return ret;
 }
