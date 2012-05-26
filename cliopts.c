@@ -48,7 +48,8 @@ enum {
     fprintf(stderr, "\n")
 
 #else
-#define cliopt_debug(a, ...)
+/** variadic macros not c89 */
+static void cliopt_debug(void *bleh, ...) { }
 #endif /* CLIOPT_DEBUG */
 
 static int
