@@ -19,14 +19,12 @@ enum {
 struct cliopts_priv {
     cliopts_entry *entries;
     cliopts_entry *current;
-    cliopts_entry entinfo;
 
     char *errstr;
     int errnum;
 
     int argsplit;
     int wanted;
-    char *progname;
 
     char current_key[4096];
     char current_value[4096];
@@ -382,7 +380,6 @@ cliopts_parse_options(cliopts_entry *entries,
     struct cliopts_priv ctx = { 0 };
     struct cliopts_extra_settings default_settings = { 0 };
 
-    ctx.progname = argv[0];
     ctx.entries = entries;
 
     if (!settings) {
@@ -460,6 +457,9 @@ cliopts_parse_options(cliopts_entry *entries,
             exit(EXIT_FAILURE);
         }
     }
+
+    /**TODO: Here we should check required arguments */
+    (void)cur_ent;
 
     return ret;
 }
