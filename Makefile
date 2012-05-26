@@ -1,6 +1,6 @@
 all: libcliopts.so test
 
-CFLAGS = -Wall -std=c89 -Winit-self -pedantic
+CFLAGS = -Wall -std=c89 -Winit-self -pedantic -g
 
 libcliopts.so: cliopts.c
 	$(CC) $(CFLAGS) -shared -o $@ -fPIC $^
