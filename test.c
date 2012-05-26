@@ -51,11 +51,14 @@ int main(int argc, char **argv)
      */
 
     for (cur = entries; cur->dest; cur++) {
-        printf("Option %s found %d times\n", cur->klong, cur->found);
+        printf("Option [%c,%s] found %d times\n",
+               cur->kshort,
+               cur->klong,
+               cur->found);
     }
 
     printf("Boolean value: %d\n", A_Boolean);
-
+    printf("Rest arguments begin at %d (%s) \n", last_opt, argv[last_opt]);
 
     return 0;
 

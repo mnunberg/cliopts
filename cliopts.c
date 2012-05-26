@@ -30,7 +30,6 @@ struct cliopts_priv {
 
     char current_key[4096];
     char current_value[4096];
-
 };
 
 enum {
@@ -528,6 +527,7 @@ cliopts_parse_options(cliopts_entry *entries,
             exit(0);
 
         } else if (curmode == MODE_RESTARGS) {
+            ii++;
             break;
         } else {
             ctx.wanted = curmode;
@@ -543,8 +543,6 @@ cliopts_parse_options(cliopts_entry *entries,
             fprintf(stderr,
                     "Option %s requires argument\n",
                     ctx.current_key);
-
-            print_help(&ctx, settings->progname);
         }
         goto GT_RET;
     }
