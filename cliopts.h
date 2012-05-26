@@ -50,12 +50,10 @@ typedef struct {
     const char *help;
 
     /** description of the value, e.g. --file=FILE */
-    /*TODO: implement this */
     const char *vdesc;
 
 
     /** set this to true if the user must provide this option */
-    /*TODO: implement this */
     int required;
 
 
