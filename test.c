@@ -10,6 +10,7 @@ int HexVal = 0x0;
 int ALongOption = -1;
 int AShortOption;
 int Required = 0;
+int ComplicatedOption;
 
 cliopts_entry entries[] = {
         {'i', "int",        CLIOPTS_ARGT_INT, &An_Integer, "A simple integer", "INT" },
@@ -20,6 +21,11 @@ cliopts_entry entries[] = {
         {0 , "long-option", CLIOPTS_ARGT_NONE, &ALongOption, "Long option" },
         {'C', NULL,         CLIOPTS_ARGT_NONE, &AShortOption, NULL },
         {'R', "required",   CLIOPTS_ARGT_NONE, &Required, "required", NULL, 1 },
+        {'X', "complicated-option", CLIOPTS_ARGT_NONE, &ComplicatedOption,
+                "This is a very long help text for a complicated option. "
+                "You may ask why do we need such complicated options, well "
+                "the answer may be, for example, that we need to test it; or"
+        },
         { 0 }
 };
 

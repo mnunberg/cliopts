@@ -1,8 +1,16 @@
+#ifndef _WIN32
+#include <sys/ioctl.h>
+#include <termios.h>
+#else
+#include <windows.h>
+#endif
+
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <limits.h>
 #include <errno.h>
+#include <ctype.h>
 
 #include "cliopts.h"
 
@@ -40,6 +48,8 @@ enum {
     MODE_RESTARGS,
     MODE_HELP
 };
+
+#define INDENT "  "
 
 #ifdef CLIOPTS_DEBUG
 
@@ -387,11 +397,25 @@ get_option_name(cliopts_entry *entry, char *buf)
     return buf;
 }
 
+static int get_terminal_width(void)
+{
+#ifndef _WIN32
+    struct winsize max;
+    ioctl(0, TIOCGWINSZ, &max);
+    return max.ws_col;
+#else
+    CONSOLE_SCREEN_BUFFER_INFO cbsi;
+    GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &cbsi);
+    return cbsi.srWindow.Right - cbsi.srWindow.Left;
+#endif
+}
+
 static char*
-format_option_help(cliopts_entry *entry, char *buf)
+format_option_help(cliopts_entry *entry,
+                   char *buf,
+                   struct cliopts_extra_settings *settings)
 {
     char *bufp = buf;
-
     if (entry->kshort) {
         bufp += sprintf(bufp, " -%c ", entry->kshort);
     }
@@ -414,38 +438,96 @@ format_option_help(cliopts_entry *entry, char *buf)
         bufp += sprintf(bufp, " <%s> ", entry->vdesc);
     }
 
+    _advance_margin(35)
+#undef _advance_margin
+
     if (entry->help) {
-        _advance_margin(35)
-        bufp += sprintf(bufp, " %s ", entry->help);
+        unsigned initial_indent = bufp - buf + 1;
+        int curpos = initial_indent;
+        const char *help_p = entry->help;
+
+        for (; *help_p; help_p++, curpos++, bufp++) {
+
+            if (curpos >= settings->line_max) {
+                unsigned ii;
+                if (!isspace(*help_p) && !isspace(*(help_p-1))) {
+                    *bufp = '-';
+                    bufp++;
+                }
+                *bufp = '\n';
+                bufp++;
+
+                for (ii = 0; ii < initial_indent+1; ii++, bufp++) {
+                    *bufp = ' ';
+                }
+
+                curpos = initial_indent;
+                if (isspace(*help_p)) {
+                    bufp--;
+                    continue;
+                }
+            }
+            *bufp = *help_p;
+        }
     }
 
     *bufp = '\0';
     return buf;
-#undef _advance_margin
 }
 
 static void
-print_help(struct cliopts_priv *ctx, const char *progname)
+print_help(struct cliopts_priv *ctx, struct cliopts_extra_settings *settings)
 {
     cliopts_entry *cur;
     cliopts_entry helpent = { 0 };
-    char helpbuf[512] = { 0 };
+    char helpbuf[1024] = { 0 };
 
     helpent.klong = "help";
     helpent.kshort = '?';
     helpent.help = "this message";
 
     fprintf(stderr, "Usage:\n");
-    fprintf(stderr, "  %s [OPTIONS...]\n\n", progname);
+    fprintf(stderr, "  %s [OPTIONS...]\n\n", settings->progname);
 
 
     for (cur = ctx->entries; cur->dest; cur++) {
         memset(helpbuf, 0, sizeof(helpbuf));
-        format_option_help(cur, helpbuf);
-        fprintf(stderr, "   %s\n", helpbuf);
+        format_option_help(cur, helpbuf, settings);
+        fprintf(stderr, INDENT "%s", helpbuf);
+
+        if (settings->show_defaults) {
+            fprintf(stderr, " [Default=");
+
+            switch (cur->ktype) {
+            case CLIOPTS_ARGT_STRING:
+                fprintf(stderr, "'%s'", cur->dest ? (char*)cur->dest : "");
+                break;
+            case CLIOPTS_ARGT_FLOAT:
+                fprintf(stderr, "%0.2f", *(float*)cur->dest);
+                break;
+            case CLIOPTS_ARGT_HEX:
+                fprintf(stderr, "0x%x", *(int*)cur->dest);
+                break;
+            case CLIOPTS_ARGT_INT:
+                fprintf(stderr, "%d", *(int*)cur->dest);
+                break;
+            case CLIOPTS_ARGT_UINT:
+                fprintf(stderr, "%u", *(unsigned int*)cur->dest);
+                break;
+            case CLIOPTS_ARGT_NONE:
+                fprintf(stderr, "%s", *(int*)cur->dest ? "TRUE" : "FALSE");
+                break;
+            default:
+                fprintf(stderr, "Unknown option type '%d'", (int)cur->ktype);
+                break;
+            }
+            fprintf(stderr, "]");
+        }
+        fprintf(stderr, "\n");
     }
     memset(helpbuf, 0, sizeof(helpbuf));
-    fprintf(stderr, "   %s\n", format_option_help(&helpent, helpbuf));
+    fprintf(stderr, INDENT "%s\n",
+            format_option_help(&helpent, helpbuf, settings));
 
 }
 
@@ -490,6 +572,11 @@ cliopts_parse_options(cliopts_entry *entries,
     if (!settings) {
         settings = &default_settings;
         settings->progname = argv[0];
+        settings->show_defaults = 1;
+    }
+
+    if (!settings->line_max) {
+        settings->line_max = get_terminal_width() - 3;
     }
 
     ii = (settings->argv_noskip) ? 0 : 1;
@@ -524,7 +611,7 @@ cliopts_parse_options(cliopts_entry *entries,
                 continue;
             }
 
-            print_help(&ctx, settings->progname);
+            print_help(&ctx, settings);
             exit(0);
 
         } else if (curmode == MODE_RESTARGS) {
@@ -570,7 +657,7 @@ cliopts_parse_options(cliopts_entry *entries,
     GT_RET:
     if (ret == -1) {
         if (settings->error_nohelp == 0) {
-            print_help(&ctx, settings->progname);
+            print_help(&ctx, settings);
         }
         if (settings->error_noexit == 0) {
             exit(EXIT_FAILURE);

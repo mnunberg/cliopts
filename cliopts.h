@@ -77,6 +77,13 @@ struct cliopts_extra_settings {
     int help_noflag;
     /** Program name (defaults to argv[0]) */
     const char *progname;
+    /** Print default values as well */
+    int show_defaults;
+    /**
+     * Maximum length of a line when printing help. This may be detected
+     * using the $COLUMNS environment variable
+     */
+    int line_max;
 };
 
 /**
