@@ -325,7 +325,7 @@ parse_option(struct cliopts_priv *ctx,
     }
 
     ctx->current->found++;
-    if (ctx->current->klong != CLIOPTS_ARGT_NONE) {
+    if (ctx->current->ktype != CLIOPTS_ARGT_NONE) {
         ctx->wanted = WANT_VALUE;
     }
 
