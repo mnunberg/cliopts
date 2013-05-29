@@ -1,6 +1,8 @@
 all: libcliopts.so test
 
-CFLAGS = -Wall -std=c89 -Winit-self -pedantic -g
+CFLAGS = -Wall -Wextra \
+		 -Wno-missing-field-initializers \
+		 -std=c89 -Winit-self -pedantic -g
 
 libcliopts.so: cliopts.c
 	$(CC) $(CFLAGS) -shared -o $@ -fPIC $^
