@@ -1,3 +1,9 @@
 *.so
 *.o
+*.exe
+*.dll
+*.obj
+*.lib
+*.exp
+*.swp
 test

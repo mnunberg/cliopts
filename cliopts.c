@@ -552,6 +552,7 @@ dump_error(struct cliopts_priv *ctx)
 
 }
 
+CLIOPTS_API
 int
 cliopts_parse_options(cliopts_entry *entries,
                       int argc,

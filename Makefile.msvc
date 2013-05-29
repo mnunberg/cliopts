@@ -1,0 +1,29 @@
+# This will just make the test application
+all: cliopts-tests.exe
+
+cliopts.dll: cliopts.c
+	CL -nologo /MD /LD \
+		/DCLIOPTS_BUILDING_DLL \
+		$** \
+		/link \
+		/out:$@ \
+		/dll
+
+cliopts-tests.exe: test.c cliopts.dll
+	CL  /MD -nologo \
+		/DCLIOPTS_USING_DLL \
+		test.c \
+		/link \
+		/out:$@ \
+		/SUBSYSTEM:CONSOLE \
+		/MACHINE:X86 \
+		/LIBPATH:. \
+		cliopts.lib
+
+clean:
+	-del *.obj
+	-del *.exe
+	-del *.lib
+	-del *.dll
+	-del *.exp
+	-del *.pdb

@@ -5,6 +5,14 @@
 extern "C" {
 #endif /* __cplusplus */
 
+#if defined(_WIN32) && defined(CLIOPTS_BUILDING_DLL)
+#define CLIOPTS_API __declspec( dllexport )
+
+#else
+#define CLIOPTS_API
+#endif
+
+
 /**
  * Various option types
  */
@@ -100,6 +108,7 @@ struct cliopts_extra_settings {
  *
  * @return 0 for success, -1 on error.
  */
+CLIOPTS_API
 int
 cliopts_parse_options(cliopts_entry *entries,
                       int argc,
