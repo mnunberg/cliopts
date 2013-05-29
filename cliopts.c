@@ -50,7 +50,7 @@ enum {
 
 #else
 /** variadic macros not c89 */
-static void cliopt_debug(void *bleh, ...) { }
+static void cliopt_debug(void *unused, ...) { (void)unused; }
 #endif /* CLIOPT_DEBUG */
 
 static int
@@ -214,7 +214,8 @@ parse_option(struct cliopts_priv *ctx,
           const char *key)
 {
     cliopts_entry *cur = NULL;
-    int ii, prefix_len = 0;
+    int prefix_len = 0;
+    unsigned ii = 0;
     const char *valp = NULL;
     size_t klen;
 
