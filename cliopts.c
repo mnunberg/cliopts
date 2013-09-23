@@ -500,7 +500,8 @@ print_help(struct cliopts_priv *ctx, struct cliopts_extra_settings *settings)
 
             switch (cur->ktype) {
             case CLIOPTS_ARGT_STRING:
-                fprintf(stderr, "'%s'", cur->dest ? (char*)cur->dest : "");
+                fprintf(stderr, "'%s'", (cur->dest && *(char **)cur->dest) ?
+                        *(char**)cur->dest : "");
                 break;
             case CLIOPTS_ARGT_FLOAT:
                 fprintf(stderr, "%0.2f", *(float*)cur->dest);
