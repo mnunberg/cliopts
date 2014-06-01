@@ -10,5 +10,8 @@ libcliopts.so: cliopts.c
 test: test.c libcliopts.so
 	$(CC) $(CFLAGS) -o $@ $< -Wl,-rpath='$$ORIGIN' -L. -lcliopts
 
+cxxtest: cxxtest.cpp libcliopts.so
+	$(CXX) -g -o $@ $< -Wl,-rpath='$$ORIGIN' -L. -lcliopts
+
 clean:
 	rm -f *.o *.so test

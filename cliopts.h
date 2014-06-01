@@ -115,10 +115,127 @@ cliopts_parse_options(cliopts_entry *entries,
                       char **argv,
                       int *lastidx,
                       struct cliopts_extra_settings *settings);
-
-
 #ifdef __cplusplus
 }
+
+#ifdef CLIOPTS_ENABLE_CXX
+#include <string>
+#include <vector>
+#include <list>
+#include <cstdlib>
+#include <cstring>
+#include <cstdio>
+
+namespace cliopts {
+class Parser;
+class Option : protected cliopts_entry {
+public:
+    bool passed() const { return found != 0; }
+    int numSpecified() const { return found; }
+    Option() {
+        memset((cliopts_entry *)this, 0, sizeof(cliopts_entry));
+    }
+protected:
+    union {
+        int i;
+        unsigned ui;
+        const char *s;
+        float f;
+        void *p;
+    } u_value;
+    std::string stmp;
+private:
+    friend class Parser;
+};
+
+template <typename T, cliopts_argtype_t Targ>
+class TOption : public Option {
+public:
+    TOption(char shortname, const char *longname, T deflval = T(), const char *helpdesc = NULL,
+            const char *valuedesc = NULL, bool mandatory = false) : Option() {
+
+        ktype = Targ;
+        kshort = shortname;
+        klong = longname;
+        dest = &u_value;
+        vdesc = valuedesc;
+        help = helpdesc;
+        required = mandatory;
+        setDefault(deflval);
+    }
+
+    inline void setDefault(T& val) {
+        u_value.f = val;
+    }
+
+    inline T result() {
+        switch (Targ) {
+        case CLIOPTS_ARGT_FLOAT:
+            return (T) u_value.f;
+        case CLIOPTS_ARGT_UINT:
+        case CLIOPTS_ARGT_HEX:
+            return (T) u_value.ui;
+        case CLIOPTS_ARGT_INT:
+            return (T) u_value.i;
+        default:
+            abort();
+            return 0;
+        }
+    }
+
+    operator T() { return result(); }
+};
+
+typedef TOption<std::string, CLIOPTS_ARGT_STRING> StringOption;
+typedef TOption<bool, CLIOPTS_ARGT_NONE> BoolOption;
+typedef TOption<unsigned, CLIOPTS_ARGT_UINT> UIntOption;
+typedef TOption<int, CLIOPTS_ARGT_INT> IntOption;
+typedef TOption<int, CLIOPTS_ARGT_HEX> HexOption;
+typedef TOption<float, CLIOPTS_ARGT_FLOAT> FloatOption;
+
+template<> bool BoolOption::result() { return u_value.i != 0; }
+template<> std::string StringOption::result() {
+    return std::string(u_value.s);
+}
+template<> void StringOption::setDefault(std::string& s) {
+    stmp = s; u_value.s = s.c_str();
+}
+
+class Parser {
+public:
+    Parser(const char *name = NULL) {
+        if (!name) {
+            progname = name;
+        }
+    }
+
+    void addOption(Option *opt) { options.push_back(opt); }
+    void addOption(Option& opt) { options.push_back(&opt); }
+    bool parse(int argc, char **argv) {
+        std::vector<cliopts_entry> ents;
+        int dummy;
+
+        for (unsigned ii = 0; ii < options.size(); ++ii) {
+            ents.push_back(*options[ii]);
+        }
+
+        if (ents.empty()) { return false; }
+        ents.push_back(Option());
+        int rv = cliopts_parse_options(&ents[0], argc, argv, &dummy, NULL);
+
+        // Copy the options back
+        for (unsigned ii = 0; ii < options.size(); ii++) {
+            *(cliopts_entry *)options[ii] = ents[ii];
+        }
+        return rv == 0;
+    }
+private:
+    std::string progname;
+    std::vector<Option*> options;
+};
+} // namespace
+#endif /* CLIOPTS_ENABLE_CXX */
+
 #endif /* __cplusplus */
 
 #endif /* CLIOPTS_H_ */
