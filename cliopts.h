@@ -201,6 +201,15 @@ template<> void StringOption::setDefault(std::string& s) {
     stmp = s; u_value.s = s.c_str();
 }
 
+template<> void IntOption::setDefault(int& i) {
+    u_value.i = i;
+}
+
+template<> void UIntOption::setDefault(unsigned& ui)
+{
+    u_value.ui = ui;
+}
+
 class Parser {
 public:
     Parser(const char *name = NULL) {
