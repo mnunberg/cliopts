@@ -2,15 +2,40 @@
 #include "cliopts.h"
 using namespace cliopts;
 
-static IntOption An_Integer('i', "int", 0, "A simple integer");
-static UIntOption An_Unsigned('u', "unsigned", 0, "Unsigned value");
-static StringOption A_String('s', "string", "", "String value");
-static HexOption HexVal('h', "hex", 0, "Hex Value");
-static BoolOption A_Boolean('v', "verbose", false, "Boolean value");
-static BoolOption ALongOption(0, "long-option", false, "Long Option");
-static BoolOption AShortOption('C', NULL, false, "Short Option");
-static BoolOption Required('R', "required", false, "Required Option", NULL, true);
-static BoolOption ComplexOption('X', "complicated-option", false, "Very long help");
+static IntOption An_Integer = IntOption("int")
+        .setDefault(0)
+        .abbrev('i')
+        .description("Signed integer value");
+
+static UIntOption An_Unsigned = UIntOption("unsigned")
+        .setDefault(0)
+        .abbrev('u')
+        .description("Unsigned integer value");
+
+static StringOption A_String = StringOption("string")
+        .setDefault("")
+        .abbrev('s')
+        .description("String option");
+
+static HexOption HexVal = HexOption("hex")
+        .setDefault(0)
+        .abbrev('h')
+        .description("Hex value");
+
+static BoolOption A_Boolean = BoolOption("verbose")
+        .abbrev('v')
+        .setDefault(false)
+        .description("Boolean value");
+
+static BoolOption Required = BoolOption("required")
+        .abbrev('R')
+        .mandatory().
+        description("Required Option");
+
+static BoolOption ComplexOption = BoolOption("complicated-option")
+        .abbrev('X')
+        .description("This is a very very very long line. This option means "
+            "nothing, but still should demonstrate text wrapping abilities");
 
 int main(int argc, char **argv)
 {
@@ -21,8 +46,6 @@ int main(int argc, char **argv)
     parser.addOption(A_String);
     parser.addOption(HexVal);
     parser.addOption(A_Boolean);
-    parser.addOption(ALongOption);
-    parser.addOption(AShortOption);
     parser.addOption(Required);
     parser.addOption(ComplexOption);
     parser.parse(argc, argv);

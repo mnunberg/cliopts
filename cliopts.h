@@ -132,9 +132,6 @@ class Option : protected cliopts_entry {
 public:
     bool passed() const { return found != 0; }
     int numSpecified() const { return found; }
-    Option() {
-        memset((cliopts_entry *)this, 0, sizeof(cliopts_entry));
-    }
 protected:
     union {
         int i;
@@ -151,22 +148,48 @@ private:
 template <typename T, cliopts_argtype_t Targ>
 class TOption : public Option {
 public:
-    TOption(char shortname, const char *longname, T deflval = T(), const char *helpdesc = NULL,
-            const char *valuedesc = NULL, bool mandatory = false) : Option() {
+    typedef TOption<T,Targ> Ttype;
 
+    TOption(char shortname, const char *longname = NULL, T deflval = T(),
+        const char *help = NULL) {
+        memset((cliopts_entry *)this, 0, sizeof(cliopts_entry));
         ktype = Targ;
-        kshort = shortname;
         klong = longname;
-        dest = &u_value;
-        vdesc = valuedesc;
-        help = helpdesc;
-        required = mandatory;
+
+        abbrev(shortname);
+        description(help);
         setDefault(deflval);
     }
 
-    inline void setDefault(T& val) {
-        u_value.f = val;
+    TOption(const char *longname) {
+        ktype = Targ;
+        klong = longname;
+        memset(&u_value, 0, sizeof u_value);
+        dest = &u_value;
     }
+
+    TOption(TOption& other) {
+        *(cliopts_entry*)this = *(cliopts_entry*) &other;
+        stmp = other.stmp;
+        u_value = other.u_value;
+
+        dest = &u_value;
+        if (other.u_value.s == other.stmp.c_str()) {
+            u_value.s = stmp.c_str();
+        }
+
+        other.dest = NULL;
+    }
+
+    Ttype& setDefault(const T& val) {
+        u_value.f = val;
+        return *this;
+    }
+
+    inline Ttype& abbrev(char val) { kshort = val; return *this; }
+    inline Ttype& description(const char *msg) { help = msg; return *this; }
+    inline Ttype& mandatory(bool val = true) { required = val; return *this; }
+    inline Ttype& argdesc(const char *desc) { vdesc = desc; return *this; }
 
     inline T result() {
         switch (Targ) {
@@ -193,21 +216,26 @@ typedef TOption<int, CLIOPTS_ARGT_INT> IntOption;
 typedef TOption<int, CLIOPTS_ARGT_HEX> HexOption;
 typedef TOption<float, CLIOPTS_ARGT_FLOAT> FloatOption;
 
-template<> bool BoolOption::result() { return u_value.i != 0; }
+template<> bool BoolOption::result() {
+    return u_value.i != 0;
+}
 template<> std::string StringOption::result() {
     return std::string(u_value.s);
 }
-template<> void StringOption::setDefault(std::string& s) {
-    stmp = s; u_value.s = s.c_str();
+template<> StringOption& StringOption::setDefault(const std::string& s) {
+    stmp = s; u_value.s = s.c_str(); return *this;
 }
-
-template<> void IntOption::setDefault(int& i) {
-    u_value.i = i;
+template<> IntOption& IntOption::setDefault(const int& i) {
+    u_value.i = i; return *this;
 }
-
-template<> void UIntOption::setDefault(unsigned& ui)
-{
-    u_value.ui = ui;
+template<> HexOption& HexOption::setDefault(const int& i) {
+    u_value.i = i; return *this;
+}
+template<> BoolOption& BoolOption::setDefault(const bool& b) {
+    u_value.i = b ? 1 : 0; return *this;
+}
+template<> UIntOption& UIntOption::setDefault(const unsigned& ui) {
+    u_value.ui = ui; return *this;
 }
 
 class Parser {
