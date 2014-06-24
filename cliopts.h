@@ -64,6 +64,8 @@ typedef struct {
     /** set this to true if the user must provide this option */
     int required;
 
+    /** set this to true to disable showing the option in the help text */
+    int hidden;
 
     /**
      * Output parameters
@@ -92,6 +94,16 @@ struct cliopts_extra_settings {
      * using the $COLUMNS environment variable
      */
     int line_max;
+
+    /** Positional parameters (if found). If this array is non-NULL on input
+     * then parameters which are not recognized will be placed here. Otherwise
+     * the parser will return with an error. This array must be large enough
+     * to contain `argc` count strings.
+     */
+    const char **restargs;
+
+    /** Number of positional parameters (if found) */
+    unsigned nrestargs;
 };
 
 /**
@@ -132,6 +144,7 @@ class Option : protected cliopts_entry {
 public:
     bool passed() const { return found != 0; }
     int numSpecified() const { return found; }
+    Option() { memset(this, 0, sizeof (cliopts_entry)); }
 protected:
     union {
         int i;
@@ -151,17 +164,18 @@ public:
     typedef TOption<T,Targ> Ttype;
 
     TOption(char shortname, const char *longname = NULL, T deflval = T(),
-        const char *help = NULL) {
+        const char *helpstr = NULL) {
         memset((cliopts_entry *)this, 0, sizeof(cliopts_entry));
         ktype = Targ;
         klong = longname;
 
         abbrev(shortname);
-        description(help);
+        description(helpstr);
         setDefault(deflval);
     }
 
     TOption(const char *longname) {
+        memset((cliopts_entry *)this, 0, sizeof(cliopts_entry));
         ktype = Targ;
         klong = longname;
         memset(&u_value, 0, sizeof u_value);
@@ -181,7 +195,7 @@ public:
         other.dest = NULL;
     }
 
-    Ttype& setDefault(const T& val) {
+    inline Ttype& setDefault(const T& val) {
         u_value.f = val;
         return *this;
     }
@@ -190,6 +204,7 @@ public:
     inline Ttype& description(const char *msg) { help = msg; return *this; }
     inline Ttype& mandatory(bool val = true) { required = val; return *this; }
     inline Ttype& argdesc(const char *desc) { vdesc = desc; return *this; }
+    inline Ttype& hide(bool val = true) { hidden = val; return *this; }
 
     inline T result() {
         switch (Targ) {
@@ -206,6 +221,8 @@ public:
         }
     }
 
+    // Only used for strings
+    inline T& const_result();
     operator T() { return result(); }
 };
 
@@ -216,25 +233,33 @@ typedef TOption<int, CLIOPTS_ARGT_INT> IntOption;
 typedef TOption<int, CLIOPTS_ARGT_HEX> HexOption;
 typedef TOption<float, CLIOPTS_ARGT_FLOAT> FloatOption;
 
-template<> bool BoolOption::result() {
+template<> inline bool BoolOption::result() {
     return u_value.i != 0;
 }
-template<> std::string StringOption::result() {
-    return std::string(u_value.s);
+
+template<> inline std::string& StringOption::const_result() {
+    if (u_value.s && passed()) {
+        stmp = u_value.s;
+    }
+    return stmp;
 }
-template<> StringOption& StringOption::setDefault(const std::string& s) {
-    stmp = s; u_value.s = s.c_str(); return *this;
+template<> inline std::string StringOption::result() {
+    return const_result();
 }
-template<> IntOption& IntOption::setDefault(const int& i) {
+
+template<> inline StringOption& StringOption::setDefault(const std::string& s) {
+    stmp = s; u_value.s = stmp.c_str(); return *this;
+}
+template<> inline IntOption& IntOption::setDefault(const int& i) {
     u_value.i = i; return *this;
 }
-template<> HexOption& HexOption::setDefault(const int& i) {
+template<> inline HexOption& HexOption::setDefault(const int& i) {
     u_value.i = i; return *this;
 }
-template<> BoolOption& BoolOption::setDefault(const bool& b) {
+template<> inline BoolOption& BoolOption::setDefault(const bool& b) {
     u_value.i = b ? 1 : 0; return *this;
 }
-template<> UIntOption& UIntOption::setDefault(const unsigned& ui) {
+template<> inline UIntOption& UIntOption::setDefault(const unsigned& ui) {
     u_value.ui = ui; return *this;
 }
 
@@ -248,9 +273,10 @@ public:
 
     void addOption(Option *opt) { options.push_back(opt); }
     void addOption(Option& opt) { options.push_back(&opt); }
-    bool parse(int argc, char **argv) {
+    bool parse(int argc, char **argv, bool standalone_args = false) {
         std::vector<cliopts_entry> ents;
-        int dummy;
+        cliopts_extra_settings settings;
+        int lastix;
 
         for (unsigned ii = 0; ii < options.size(); ++ii) {
             ents.push_back(*options[ii]);
@@ -258,17 +284,44 @@ public:
 
         if (ents.empty()) { return false; }
         ents.push_back(Option());
-        int rv = cliopts_parse_options(&ents[0], argc, argv, &dummy, NULL);
+        memset(&settings, 0, sizeof settings);
+        const char **tmpargs = NULL;
+        if (standalone_args) {
+            tmpargs = new const char*[argc];
+            settings.restargs = tmpargs;
+            settings.nrestargs = 0;
+        }
+        settings.show_defaults = 1;
+
+        int rv = cliopts_parse_options(&ents[0], argc, argv, &lastix, &settings);
+
+        if (tmpargs != NULL) {
+            for (unsigned ii = 0; ii < settings.nrestargs; ii++) {
+                restargs.push_back(tmpargs[ii]);
+            }
+            delete[] tmpargs;
+        }
 
         // Copy the options back
         for (unsigned ii = 0; ii < options.size(); ii++) {
             *(cliopts_entry *)options[ii] = ents[ii];
         }
+
+        if (rv == 0 && lastix != 0) {
+            for (; lastix < argc; lastix++) {
+                restargs.push_back(argv[lastix]);
+            }
+        }
+
         return rv == 0;
     }
+
+    const std::vector<std::string>& getRestArgs() { return restargs; }
 private:
     std::string progname;
     std::vector<Option*> options;
+    std::vector<std::string> restargs;
+    Parser(Parser&);
 };
 } // namespace
 #endif /* CLIOPTS_ENABLE_CXX */

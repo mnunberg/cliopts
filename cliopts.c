@@ -29,6 +29,7 @@ struct cliopts_priv {
 
     cliopts_entry *prev;
     cliopts_entry *current;
+    struct cliopts_extra_settings *settings;
 
     char *errstr;
     int errnum;
@@ -259,13 +260,14 @@ parse_option(struct cliopts_priv *ctx,
         } else if (key[ii] == '=' && prefix_len == 2) {
             /* only split on '=' if we're called as '--' */
             valp = key + (ii + 1);
+            klen = ii;
             break;
         }
     }
 
     GT_PARSEOPT:
     memset(ctx->current_value, 0, sizeof(ctx->current_value));
-    memcpy(ctx->current_key, key, ii);
+    memcpy(ctx->current_key, key, klen);
     ctx->current_key[ii] = '\0';
 
     if (valp) {
@@ -273,8 +275,12 @@ parse_option(struct cliopts_priv *ctx,
     }
 
     if (prefix_len == 0 || prefix_len > 2) {
-        if (ctx->prev && ctx->prev->ktype == CLIOPTS_ARGT_NONE) {
-            ctx->errstr = "";
+        if (ctx->settings->restargs) {
+            key -= prefix_len;
+            ctx->settings->restargs[ctx->settings->nrestargs++] = key;
+            return WANT_OPTION;
+        } else if (ctx->prev && ctx->prev->ktype == CLIOPTS_ARGT_NONE) {
+            ctx->errstr = "Option does not accept a value";
             ctx->errnum = CLIOPTS_ERR_ISSWITCH;
         } else {
             ctx->errstr = "Options must begin with either '-' or '--'";
@@ -296,7 +302,9 @@ parse_option(struct cliopts_priv *ctx,
      * Bare --
      */
     if (prefix_len == 2 && *key == '\0') {
+        if (ctx->settings->restargs) {
 
+        }
         if (ctx->wanted == WANT_VALUE) {
             ctx->errnum = CLIOPTS_ERR_NEED_ARG;
             ctx->errstr = "Found bare '--', but value wanted";
@@ -315,11 +323,10 @@ parse_option(struct cliopts_priv *ctx,
             }
             continue;
         }
-
         /** else, prefix_len is 2 */
         if (cur->klong == NULL ||
                 (optlen = strlen(cur->klong) != klen) ||
-                strcmp(cur->klong, ctx->current_key) != 0) {
+                strncmp(cur->klong, ctx->current_key, klen) != 0) {
 
             continue;
         }
@@ -401,8 +408,11 @@ static int get_terminal_width(void)
 {
 #ifndef _WIN32
     struct winsize max;
-    ioctl(0, TIOCGWINSZ, &max);
-    return max.ws_col;
+    if (ioctl(0, TIOCGWINSZ, &max) != -1) {
+        return max.ws_col;
+    } else {
+        return 80;
+    }
 #else
     CONSOLE_SCREEN_BUFFER_INFO cbsi;
     GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &cbsi);
@@ -491,9 +501,14 @@ print_help(struct cliopts_priv *ctx, struct cliopts_extra_settings *settings)
 
 
     for (cur = ctx->entries; cur->dest; cur++) {
+        if (cur->hidden) {
+            continue;
+        }
+
         memset(helpbuf, 0, sizeof(helpbuf));
         format_option_help(cur, helpbuf, settings);
         fprintf(stderr, INDENT "%s", helpbuf);
+
 
         if (settings->show_defaults) {
             fprintf(stderr, " [Default=");
@@ -573,9 +588,12 @@ cliopts_parse_options(cliopts_entry *entries,
 
     if (!settings) {
         settings = &default_settings;
-        settings->progname = argv[0];
         settings->show_defaults = 1;
     }
+    if (!settings->progname) {
+        settings->progname = argv[0];
+    }
+    settings->nrestargs = 0;
 
     if (!settings->line_max) {
         settings->line_max = get_terminal_width() - 3;
@@ -592,6 +610,7 @@ cliopts_parse_options(cliopts_entry *entries,
 
     curmode = WANT_OPTION;
     ctx.wanted = curmode;
+    ctx.settings = settings;
 
     for (; ii < argc; ii++) {
 
