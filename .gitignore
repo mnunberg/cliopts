@@ -6,4 +6,5 @@
 *.lib
 *.exp
 *.swp
+cxxtest
 test
