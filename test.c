@@ -11,6 +11,7 @@ int ALongOption = -1;
 int AShortOption;
 int Required = 0;
 int ComplicatedOption;
+cliopts_list ValueList = { NULL };
 
 cliopts_entry entries[] = {
         {'i', "int",        CLIOPTS_ARGT_INT, &An_Integer, "A simple integer", "INT" },
@@ -26,6 +27,7 @@ cliopts_entry entries[] = {
                 "You may ask why do we need such complicated options, well "
                 "the answer may be, for example, that we need to test it; or"
         },
+        {'D', "list",       CLIOPTS_ARGT_LIST, &ValueList, "OPTIONS" },
         { 0 }
 };
 
@@ -51,6 +53,7 @@ int main(int argc, char **argv)
     if (HexVal) {
         printf("Have hex: %x\n", HexVal);
     }
+
     /* If you feel masochistic, you can use a loop. This is necessary
      * if you want to know whether an option was specified on the command
      * line, or how many times it was specified
@@ -64,8 +67,17 @@ int main(int argc, char **argv)
     }
 
     printf("Boolean value: %d\n", A_Boolean);
-    printf("Rest arguments begin at %d (%s) \n", last_opt, argv[last_opt]);
 
+    if (ValueList.nvalues) {
+        size_t ii;
+        printf("Have value list:\n");
+        for (ii = 0; ii < ValueList.nvalues; ii++) {
+            printf("  %s\n", ValueList.values[ii]);
+        }
+    }
+
+    printf("Rest arguments begin at %d (%s) \n", last_opt, argv[last_opt]);
+    cliopts_list_clear(&ValueList);
     return 0;
 
 }

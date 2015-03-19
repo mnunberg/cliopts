@@ -1,6 +1,8 @@
 #ifndef CLIOPTS_H_
 #define CLIOPTS_H_
 
+#include <stddef.h> /* size_t */
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
@@ -34,7 +36,14 @@ typedef enum {
     CLIOPTS_ARGT_STRING,
 
     /** dest should be a float* */
-    CLIOPTS_ARGT_FLOAT
+    CLIOPTS_ARGT_FLOAT,
+
+    /**
+     * Destination should be cliopts_list. Argument type is assumed to be a
+     * string. You can use this option type to build -Doption=value style
+     * options which can be processed later on.
+     */
+    CLIOPTS_ARGT_LIST
 } cliopts_argtype_t;
 
 typedef struct {
@@ -109,6 +118,23 @@ struct cliopts_extra_settings {
     /** Number of positional parameters (if found) */
     unsigned nrestargs;
 };
+
+typedef struct {
+    /** Array of string pointers. Allocated via standard malloc functions */
+    char **values;
+    /** Number of valid entries */
+    size_t nvalues;
+    /** Number of entries allocated */
+    size_t nalloc;
+} cliopts_list;
+
+/**
+ * Clear a list of its contents
+ * @param l The list
+ */
+CLIOPTS_API
+void
+cliopts_list_clear(cliopts_list *l);
 
 /**
  * Parse options.
