@@ -37,6 +37,10 @@ static BoolOption ComplexOption = BoolOption("complicated-option")
         .description("This is a very very very long line. This option means "
             "nothing, but still should demonstrate text wrapping abilities");
 
+static ListOption MultiOption = ListOption("list-option")
+        .abbrev('D')
+        .description("Long list option...");
+
 int main(int argc, char **argv)
 {
     Parser parser("Test App");
@@ -48,6 +52,7 @@ int main(int argc, char **argv)
     parser.addOption(A_Boolean);
     parser.addOption(Required);
     parser.addOption(ComplexOption);
+    parser.addOption(MultiOption);
     parser.parse(argc, argv);
 
     if (A_String.passed()) {
@@ -66,6 +71,12 @@ int main(int argc, char **argv)
     }
     printf("Boolean value: %d\n", (bool)A_Boolean);
     printf("Boolean value specified %d times\n", A_Boolean.numSpecified());
+
+    const std::vector<std::string>& kv = MultiOption.const_result();
+    printf("Multi Option:\n");
+    for (size_t ii = 0; ii < kv.size(); ii++) {
+        printf("  Multi: %s\n", kv[ii].c_str());
+    }
 
     return 0;
 }

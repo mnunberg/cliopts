@@ -1,17 +1,17 @@
-all: libcliopts.so test
+all: c-example cxx-example
 
 CFLAGS = -Wall -Wextra \
 		 -Wno-missing-field-initializers \
 		 -std=c89 -Winit-self -pedantic -g
 
-libcliopts.so: cliopts.c
-	$(CC) $(CFLAGS) -shared -o $@ -fPIC $^
+CXXFLAGS = -Wall -Wextra -g
 
-test: test.c libcliopts.so
-	$(CC) $(CFLAGS) -o $@ $< -Wl,-rpath='$$ORIGIN' -L. -lcliopts
+c-example: c-example.c cliopts.o
+	$(CC) $(CFLAGS) -o $@ $^
 
-cxxtest: cxxtest.cpp libcliopts.so
-	$(CXX) -g -o $@ $< -Wl,-rpath='$$ORIGIN' -L. -lcliopts
+cxx-example: cxx-example.cpp cliopts.o
+	$(CXX) $(CXXFLAGS) -o $@ $^
 
 clean:
-	rm -f *.o *.so test
+	rm -f *.o *.so c-example cxx-example
+	rm -fr *.dSYM

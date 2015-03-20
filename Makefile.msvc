@@ -9,16 +9,28 @@ cliopts.dll: cliopts.c
 		/out:$@ \
 		/dll
 
-cliopts-tests.exe: test.c cliopts.dll
+c-test.exe: c-example.c cliopts.dll
 	CL  /MD -nologo \
 		/DCLIOPTS_USING_DLL \
-		test.c \
+		c-example.c \
 		/link \
 		/out:$@ \
 		/SUBSYSTEM:CONSOLE \
 		/MACHINE:X86 \
 		/LIBPATH:. \
 		cliopts.lib
+
+cxx-test.exe: cxx-example.cpp cliopts.dll
+	CL /MD -nologo \
+		/DCLIOPTS_USING_DLL \
+		cxx-example.cpp \
+		/link \
+		/out:$@ \
+		/SUBSYSTEM:CONSOLE \
+		/MACHINE:X86 \
+		/LIBPATH:. \
+		cliopts.lib
+
 
 clean:
 	-del *.obj
