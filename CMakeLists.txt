@@ -1,0 +1,10 @@
+CMAKE_MINIMUM_REQUIRED(VERSION 2.8.9)
+ADD_LIBRARY(cliopts cliopts.c)
+ADD_EXECUTABLE(c-example c-example.c)
+ADD_EXECUTABLE(cxx-example cxx-example.cpp)
+TARGET_LINK_LIBRARIES(c-example cliopts)
+TARGET_LINK_LIBRARIES(cxx-example cliopts)
+
+IF(WIN32)
+    ADD_DEFINITIONS(-D_CRT_SECURE_NO_WARNINGS)
+ENDIF()
