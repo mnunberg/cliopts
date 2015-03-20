@@ -632,9 +632,13 @@ cliopts_parse_options(cliopts_entry *entries,
      * Now let's build ourselves a
      */
     int curmode;
-    int ii, ret = 0;
+    int ii, ret = 0, lastidx_s = 0;
     struct cliopts_priv ctx = { 0 };
     struct cliopts_extra_settings default_settings = { 0 };
+
+    if (!lastidx) {
+        lastidx = &lastidx_s;
+    }
 
     ctx.entries = entries;
 
