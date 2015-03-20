@@ -393,6 +393,9 @@ template<> inline std::vector<std::string> ListOption::result() {
 template<> inline BoolOption& BoolOption::setDefault(const bool& b) {
     innerVal = b ? 1 : 0; return *this;
 }
+template<> inline bool BoolOption::result() {
+    return innerVal != 0 ? true : false;
+}
 
 /**
  * Parser class which contains one or more cliopts::Option objects. Options
