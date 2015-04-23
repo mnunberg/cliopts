@@ -374,7 +374,7 @@ template<> inline void StringOption::doCopy(StringOption& other) {
         innerVal = priv.c_str();
     }
 }
-template<> inline const char* StringOption::createDefault() { return NULL; }
+template<> inline const char* StringOption::createDefault() { return ""; }
 
 // LIST ROUTINES
 template<> inline std::vector<std::string>& ListOption::const_result() {
