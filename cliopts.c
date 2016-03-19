@@ -556,7 +556,7 @@ print_help(struct cliopts_priv *ctx, struct cliopts_extra_settings *settings)
         fprintf(stderr, INDENT "%s", helpbuf);
 
 
-        if (settings->show_defaults) {
+        if (settings->show_defaults && !cur->required) {
             fprintf(stderr, " [Default=");
 
             switch (cur->ktype) {
