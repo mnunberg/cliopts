@@ -117,6 +117,15 @@ struct cliopts_extra_settings {
 
     /** Number of positional parameters (if found) */
     unsigned nrestargs;
+    
+    /** 
+     * Indicates whether the restargs are required. 
+     * This text is printed after argstring.
+     */
+    const char *argstring_restargs;
+    
+    /** The minimum required rest args */
+    int min_restargs;
 };
 
 typedef struct {
@@ -429,9 +438,10 @@ public:
      * @param argv list of arguments
      * @param standalone_args whether to accept (and store) positional arguments
      * (after all named options are processed).
+     * @param min_standalone_args the minimum required standalone args.
      * @return true on parse success, false on parse failure
      */
-    bool parse(int argc, char **argv, bool standalone_args = false) {
+    bool parse(int argc, char **argv, const char *standalone_args = NULL, int min_standalone_args = 0) {
         std::vector<cliopts_entry> ents;
         cliopts_extra_settings settings = default_settings;
         int lastix;
@@ -447,6 +457,8 @@ public:
             tmpargs = new const char*[argc];
             settings.restargs = tmpargs;
             settings.nrestargs = 0;
+            settings.argstring_restargs = standalone_args;
+            settings.min_restargs = min_standalone_args;
         }
         settings.show_defaults = 1;
 

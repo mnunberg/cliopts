@@ -534,7 +534,12 @@ print_help(struct cliopts_priv *ctx, struct cliopts_extra_settings *settings)
     helpent.help = "this message";
 
     fprintf(stderr, "Usage:\n");
-    fprintf(stderr, "  %s %s\n\n", settings->progname, settings->argstring);
+    fprintf(stderr, "  %s %s", settings->progname, settings->argstring);
+    
+    if (settings->argstring_restargs)
+        fprintf(stderr, " %s", settings->argstring_restargs);
+    
+    fprintf(stderr, "\n\n");
     if (settings->shortdesc) {
         fprintf(stderr, "%s", settings->shortdesc);
         fprintf(stderr, "\n");
@@ -711,6 +716,17 @@ cliopts_parse_options(cliopts_entry *entries,
             fprintf(stderr,
                     "Option %s requires argument\n",
                     ctx.current_key);
+        }
+        goto GT_RET;
+    }
+    
+    if (settings->argstring_restargs && settings->nrestargs < settings->min_restargs) {
+        ret = -1;
+        
+        if (settings->error_nohelp == 0) {
+            fprintf(stderr,
+                    "Required arguments: %s\n",
+                    settings->argstring_restargs);
         }
         goto GT_RET;
     }
