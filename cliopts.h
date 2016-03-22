@@ -441,7 +441,8 @@ public:
      * @param min_standalone_args the minimum required standalone args.
      * @return true on parse success, false on parse failure
      */
-    bool parse(int argc, char **argv, const char *standalone_args = NULL, int min_standalone_args = 0) {
+    bool parse(int argc, char **argv, const char *standalone_args = NULL,
+            int min_standalone_args = 0) {
         std::vector<cliopts_entry> ents;
         cliopts_extra_settings settings = default_settings;
         int lastix;

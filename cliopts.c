@@ -720,7 +720,8 @@ cliopts_parse_options(cliopts_entry *entries,
         goto GT_RET;
     }
     
-    if (settings->argstring_restargs && settings->nrestargs < settings->min_restargs) {
+    if (settings->argstring_restargs &&
+            settings->nrestargs < settings->min_restargs) {
         ret = -1;
         
         if (settings->error_nohelp == 0) {
