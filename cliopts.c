@@ -225,7 +225,8 @@ parse_value(struct cliopts_priv *ctx,
     } else if (entry->ktype == CLIOPTS_ARGT_UINT) {
         exfn = extract_uint;
     } else {
-        fprintf(stderr, "Unrecognized type %d. Abort.\n", entry->ktype);
+        fprintf(stderr, "Unrecognized type %d.\n", entry->ktype);
+        return MODE_ERROR;
     }
 
     exret = exfn(value, entry->dest, &ctx->errstr);
