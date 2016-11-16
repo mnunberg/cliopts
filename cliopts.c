@@ -139,7 +139,11 @@ extract_ulonglong(const char *s, void *dest, char **errp)
 {
     unsigned long long value;
     char *endptr = NULL;
+#ifdef _WIN32
+    value = _strtoui64(s, &endptr, 10);
+#else
     value = strtoull(s, &endptr, 10);
+#endif
     _VERIFY_INT_COMMON(ULLONG_MAX, ULLONG_MAX);
     *(unsigned long long *)dest = value;
     return 0;
@@ -150,7 +154,7 @@ static int extract_ulonglong(const char *s, void *dest, char **errp)
     *errp = "long long not available";
     return -1;
 }
-#endif
+#endif /* ULLONG_MAX */
 
 static int
 extract_hex(const char *s, void *dest, char **errp)
