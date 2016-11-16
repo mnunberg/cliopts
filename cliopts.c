@@ -134,7 +134,6 @@ extract_uint(const char *s, void *dest, char **errp)
 }
 
 #ifdef ULLONG_MAX
-unsigned long long strtoull(const char *, char **, int);
 static int
 extract_ulonglong(const char *s, void *dest, char **errp)
 {
