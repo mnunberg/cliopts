@@ -133,6 +133,26 @@ extract_uint(const char *s, void *dest, char **errp)
     return 0;
 }
 
+#ifdef ULLONG_MAX
+unsigned long long strtoull(const char *, char **, int);
+static int
+extract_ulonglong(const char *s, void *dest, char **errp)
+{
+    unsigned long long value;
+    char *endptr = NULL;
+    value = strtoull(s, &endptr, 10);
+    _VERIFY_INT_COMMON(ULLONG_MAX, ULLONG_MAX);
+    *(unsigned long long *)dest = value;
+    return 0;
+}
+#else
+static int extract_ulonglong(const char *s, void *dest, char **errp)
+{
+    *errp = "long long not available";
+    return -1;
+}
+#endif
+
 static int
 extract_hex(const char *s, void *dest, char **errp)
 {
@@ -224,6 +244,8 @@ parse_value(struct cliopts_priv *ctx,
         exfn = extract_int;
     } else if (entry->ktype == CLIOPTS_ARGT_UINT) {
         exfn = extract_uint;
+    } else if (entry->ktype == CLIOPTS_ARGT_ULONGLONG) {
+        exfn = extract_ulonglong;
     } else {
         fprintf(stderr, "Unrecognized type %d.\n", entry->ktype);
         return MODE_ERROR;
@@ -583,6 +605,11 @@ print_help(struct cliopts_priv *ctx, struct cliopts_extra_settings *settings)
             case CLIOPTS_ARGT_UINT:
                 fprintf(stderr, "%u", *(unsigned int*)cur->dest);
                 break;
+#ifdef ULLONG_MAX
+            case CLIOPTS_ARGT_ULONGLONG:
+                fprintf(stderr, "%llu", *(unsigned long long*)cur->dest);
+                break;
+#endif
             case CLIOPTS_ARGT_NONE:
                 fprintf(stderr, "%s", *(int*)cur->dest ? "TRUE" : "FALSE");
                 break;

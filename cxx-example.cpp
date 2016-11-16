@@ -12,6 +12,10 @@ static UIntOption An_Unsigned = UIntOption("unsigned")
         .abbrev('u')
         .description("Unsigned integer value");
 
+static ULongLongOption A_LongLong = ULongLongOption("longlong-option")
+        .abbrev('U')
+        .description("Long long integer option!");
+
 static StringOption A_String = StringOption("string")
         .setDefault("")
         .abbrev('s')
@@ -47,6 +51,7 @@ int main(int argc, char **argv)
 
     parser.addOption(An_Integer);
     parser.addOption(An_Unsigned);
+    parser.addOption(A_LongLong);
     parser.addOption(A_String);
     parser.addOption(HexVal);
     parser.addOption(A_Boolean);
@@ -65,6 +70,9 @@ int main(int argc, char **argv)
 
     if (An_Unsigned) {
         printf("Have unsigned: %u\n", (unsigned)An_Unsigned);
+    }
+    if (A_LongLong) {
+        printf("Have unsigned long long: %llu\n", (unsigned long long)A_LongLong);
     }
     if (HexVal) {
         printf("Have hex: %x\n", (int)HexVal);

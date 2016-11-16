@@ -2,6 +2,7 @@ all: c-example cxx-example
 
 CFLAGS = -Wall -Wextra \
 		 -Wno-missing-field-initializers \
+		 -Wno-long-long \
 		 -std=c89 -Winit-self -pedantic -g
 
 CXXFLAGS = -Wall -Wextra -g

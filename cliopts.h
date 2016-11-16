@@ -2,6 +2,7 @@
 #define CLIOPTS_H_
 
 #include <stddef.h> /* size_t */
+#include <limits.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -27,6 +28,9 @@ typedef enum {
 
     /** dest should be an unsigned int */
     CLIOPTS_ARGT_UINT,
+
+    /** dest should be an unsigned long long */
+    CLIOPTS_ARGT_ULONGLONG,
 
     /** dest should be an unsigned int, but command line format is hex */
     CLIOPTS_ARGT_HEX,
@@ -340,6 +344,10 @@ typedef TOption<bool,
 typedef TOption<unsigned,
         CLIOPTS_ARGT_UINT,
         unsigned> UIntOption;
+
+typedef TOption<unsigned long long,
+        CLIOPTS_ARGT_ULONGLONG,
+        unsigned long long> ULongLongOption;
 
 typedef TOption<int,
         CLIOPTS_ARGT_INT,
