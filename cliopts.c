@@ -561,10 +561,11 @@ print_help(struct cliopts_priv *ctx, struct cliopts_extra_settings *settings)
 
     fprintf(stderr, "Usage:\n");
     fprintf(stderr, "  %s %s", settings->progname, settings->argstring);
-    
-    if (settings->argstring_restargs)
+
+    if (settings->argstring_restargs) {
         fprintf(stderr, " %s", settings->argstring_restargs);
-    
+    }
+
     fprintf(stderr, "\n\n");
     if (settings->shortdesc) {
         fprintf(stderr, "%s", settings->shortdesc);
@@ -750,11 +751,11 @@ cliopts_parse_options(cliopts_entry *entries,
         }
         goto GT_RET;
     }
-    
+
     if (settings->argstring_restargs &&
             settings->nrestargs < settings->min_restargs) {
         ret = -1;
-        
+
         if (settings->error_nohelp == 0) {
             fprintf(stderr,
                     "Required arguments: %s\n",

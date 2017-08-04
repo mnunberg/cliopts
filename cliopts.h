@@ -121,13 +121,13 @@ struct cliopts_extra_settings {
 
     /** Number of positional parameters (if found) */
     unsigned nrestargs;
-    
-    /** 
-     * Indicates whether the restargs are required. 
+
+    /**
+     * Indicates whether the restargs are required.
      * This text is printed after argstring.
      */
     const char *argstring_restargs;
-    
+
     /** The minimum required rest args */
     int min_restargs;
 };
